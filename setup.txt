@@ -1,5 +1,3 @@
-ctransformers
-transformers
 langchain
 langchain-community
 torch
@@ -8,3 +6,8 @@ sentence-transformers
 gpt4all
 faiss-cpu
 openai
+chromadb
+pdfplumber
+flask_sqlalchemy
+flask
+pymysql
