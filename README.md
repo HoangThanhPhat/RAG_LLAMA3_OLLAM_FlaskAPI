@@ -7,4 +7,5 @@
 
 #1. Kiểm tra cổng: netstat -aon | findstr :11434
 
-2. kết thúc tiến trình: taskkill /PID <PID> /F               <PID> thay bằng PID muốn tắt
+2. kết thúc tiến trình: taskkill /PID <PID> /F               <PID> thay bằng PID muốn tắt   {win 11}
+                        taskkill /PID <PORT>                                                {win 10}
