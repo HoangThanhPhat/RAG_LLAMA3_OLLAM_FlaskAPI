@@ -1,6 +1,8 @@
 # -*- encoding: utf-8 -*-
-from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, jsonify, render_template, redirect, url_for
+from werkzeug.security import check_password_hash
+from flask_cors import CORS
+from flask_bcrypt import generate_password_hash
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain_community.llms import Ollama
 from langchain_community.vectorstores import Chroma
@@ -10,17 +12,20 @@ from langchain_community.document_loaders import PDFPlumberLoader
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.prompts import PromptTemplate
 from datetime import datetime
-from flask import render_template
 from pymysql import IntegrityError
+from crt_db import database,User,Qna
+
 
 app = Flask(__name__)
+# CORS(app)
 
 # --------------------------------------------------------Connect database-----------------------------------------------------------------
 # My SQL
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:160302@localhost/rag_llama3?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-database = SQLAlchemy(app)
+# database = SQLAlchemy(app)
+database.init_app(app)
 # app.app_context().push()
 # Khởi tạo cơ sở dữ liệu
 # with app.app_context():
@@ -40,7 +45,11 @@ cached_llm = Ollama(model= "llama3")
 raw_prompt = PromptTemplate.from_template(
     """
     <s>[INST] Bạn là một trợ lý ảo thông minh. 
-              Nếu như bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. [/INST] </s>
+              Nếu như bạn không biết câu trả lời, hãy nói không biết, đừng cố tạo ra câu trả lời. 
+              Chỉ trả lời câu hỏi được đề ra.
+              Luôn trả lời bằng tiếng Việt Nam.
+              Trả lời chỗ nào cần xuống dòng thì xuống dòng, trình bày thật đẹp cho người dùng dễ hiểu.          
+    [/INST] </s>
     [INST] {input}
             Context: {context}
             Answer: 
@@ -94,7 +103,7 @@ def askPDFPost():
         search_type = "similarity_score_threshold",
         search_kwargs = {
             "k": 3,
-            "score_threshold": 0.01,
+            "score_threshold": 0.03,
         },
     )
 
@@ -106,7 +115,6 @@ def askPDFPost():
     result = chain.invoke({"input": query})
 
 # --------------------------------------Add database------------------------------------------
-    from crt_db import Qna
     # Lấy câu trả lời từ result
     result_answer = result["answer"]
 
@@ -165,16 +173,39 @@ def pdfPost():
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
 # ----------------------------------------------------------------CRUD USER--------------------------------------------------------------
-@app.route("/user", methods=["POST"])
+
+# -----------------Create User--------------------------
+@app.route("/create_user", methods=["POST"])
 def create_user():
     try:
         # Trích xuất thông tin người dùng từ yêu cầu POST
         data = request.json
-        name = data.get("name")
+        username  = data.get("username")
+        password  = data.get("password")
+        firstname = data.get("firstname")
+        lastname  = data.get("lastname")
+        DoB       = data.get("DoB")
+        phone     = data.get("phone number")
+        email     = data.get("email")
+        address   = data.get("address")
+        roleID    = data.get("roleID")
+
+        # Hash mật khẩu
+        hashed_password = generate_password_hash(password).decode("utf-8")
+
 
         # Tạo một bản ghi mới trong cơ sở dữ liệu với thông tin người dùng
-        from crt_db import User
-        new_user = User(name=name)
+        new_user = User(
+            username  = username,
+            password  = hashed_password,
+            firstname = firstname,
+            lastname  = lastname,
+            DoB       = DoB,
+            phone     = phone,
+            email     = email,
+            address   = address,
+            roleID    = roleID
+        )
         database.session.add(new_user)
         database.session.commit()
         return jsonify({"message": "User created successfully"}), 201
@@ -184,16 +215,127 @@ def create_user():
     except Exception as e:
         database.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+# -----------------Get User--------------------------
+@app.route("/user/<username>", methods=["GET"])
+def get_user(username):
+    try:
+        # Tìm người dùng trong cơ sở dữ liệu
+        user = User.query.filter_by(username=username).first()
+
+        # Kiểm tra xem người dùng có tồn tại hay không
+        if user:
+            # Nếu tồn tại, trả về thông tin của người dùng
+            user_data = {
+                "username": user.username,
+                "password": user.password,
+                "firstname": user.firstname,
+                "lastname": user.lastname,
+                "DoB": user.DoB,
+                "phone": user.phone,
+                "email": user.email,
+                "address": user.address,
+                "roleID": user.roleID
+            }
+            return jsonify(user_data), 200
+        else:
+            # Nếu không tồn tại, trả về thông báo lỗi
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        # Xử lý các ngoại lệ và trả về thông báo lỗi
+        return jsonify({"error": str(e)}), 500
+
+# -------------------Get all user-----------------
+@app.route("/users", methods=["GET"])
+def get_all_users():
+    try:
+        # Lấy tất cả người dùng từ cơ sở dữ liệu
+        all_users = User.query.all()
+
+        # Tạo danh sách chứa thông tin của tất cả người dùng
+        users_data = []
+        for user in all_users:
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "password": user.password,
+                "firstname": user.firstname,
+                "lastname": user.lastname,
+                "DoB": user.DoB,
+                "phone": user.phone,
+                "email": user.email,
+                "address": user.address,
+                "roleID": user.roleID
+            }
+            users_data.append(user_data)
+
+        # Trả về danh sách người dùng dưới dạng JSON
+        return jsonify(users_data), 200
+    except Exception as e:
+        # Xử lý các ngoại lệ và trả về thông báo lỗi
+        return jsonify({"error": str(e)}), 500
+
+
+# -----------------Update User--------------------------
+@app.route("/user/<username>", methods=["PUT"])
+def update_user(username):
+    try:
+        # Tìm người dùng trong cơ sở dữ liệu
+        user = User.query.filter_by(username=username).first()
+
+        # Kiểm tra xem người dùng có tồn tại hay không
+        if user:
+            # Cập nhật thông tin người dùng với dữ liệu được gửi trong yêu cầu
+            data = request.json
+            user.username = data.get("username", user.username)
+            user.password = data.get("password", user.password)
+            user.firstname = data.get("firstname", user.firstname)
+            user.lastname = data.get("lastname", user.lastname)
+            user.DoB = data.get("DoB", user.DoB)
+            user.phone = data.get("phone", user.phone)
+            user.email = data.get("email", user.email)
+            user.address = data.get("address", user.address)
+            user.roleID = data.get("roleID", user.roleID)
+
+            # Lưu thay đổi vào cơ sở dữ liệu
+            database.session.commit()
+            return jsonify({"message": "User updated successfully"}), 200
+        else:
+            # Nếu không tồn tại, trả về thông báo lỗi
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        # Xử lý các ngoại lệ và trả về thông báo lỗi
+        return jsonify({"error": str(e)}), 500
+
+# -----------------Delete User--------------------------
+@app.route("/user/<username>", methods=["DELETE"])
+def delete_user(username):
+    try:
+        # Tìm người dùng trong cơ sở dữ liệu
+        user = User.query.filter_by(username=username).first()
+
+        # Kiểm tra xem người dùng có tồn tại hay không
+        if user:
+            # Xóa người dùng
+            database.session.delete(user)
+            database.session.commit()
+            return jsonify({"message": "User deleted successfully"}), 200
+        else:
+            # Nếu không tồn tại, trả về thông báo lỗi
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        # Xử lý các ngoại lệ và trả về thông báo lỗi
+        return jsonify({"error": str(e)}), 500
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
-
-def main():
-    return render_template('index.html')
 
 def start_app():
     app.run(host= "0.0.0.0", port= 8080, debug=True)
 if __name__ == "__main__":
     start_app()
+
 
 
 
