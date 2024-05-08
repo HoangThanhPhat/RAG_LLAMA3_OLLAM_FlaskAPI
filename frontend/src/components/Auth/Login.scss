@@ -1,0 +1,123 @@
+// .Login_Background {
+//     background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+//     background-size: 100% 100%;
+//     animation: gradient 15s ease infinite;
+//     height: 100vh;
+    
+  
+//     .Login_Container {
+//       background-color: white;
+//       border-radius: 5%;
+//       width: 500px;
+//       height: 480px;
+//       margin: auto;
+//       padding: 5px;
+//       position: absolute;
+//       top: 0;
+//       bottom: 0;
+//       left: 0;
+//       right: 0;
+      
+      
+//           .text-login{
+//               font-weight: 1000;
+//               font-size: 20px;
+//               padding: 30px;
+//               text-align: center;
+//           }
+  
+//           .Login_input{
+//               margin: 8px 0;
+  
+//               .custom-input-password {
+//                   position: relative;
+  
+//                   i {
+//                       position: absolute;
+//                       top: 6px;
+//                       right: 5px;
+//                       cursor: pointer;
+//                   }
+//               }
+//           }
+  
+//           .btn_login{
+//               background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+//               background-size: 300% 300%;
+//               width: 100%;
+//               margin: 10px 0;
+//               height: 30px;
+//               border-radius: 15px;
+//               outline: none;
+//               border: none;
+//               color: white;
+//               font-size: 15px;
+//           }
+//           .btn_login:hover{
+//             background-color: #c32424;
+//           }
+
+//           .error {
+//             text-align: center;
+//             color: red;
+//           }
+
+  
+//           .forgot_password{
+//               font-size: 12px;
+//               text-align: center;
+//           }
+  
+//           .social_login{
+//               display: flex;
+//               text-align: center;
+//               justify-content: center;
+//               margin-top: 10px;
+  
+//               .google{
+//                   font-size: 30px;
+//                   background: #c32424;
+//                   border-radius: 50%;
+//                   height: 50px;
+//                   width: 50px;
+//                   display: flex;
+//                   align-items: center;
+//                   justify-content: center;
+//                   color: white;
+//                   margin-right: 10px;
+//                   cursor: pointer;
+//               }
+  
+//               .facebook{
+//                   font-size: 30px;
+//                   background: #307aff;
+//                   border-radius: 50%;
+//                   height: 50px;
+//                   width: 50px;
+//                   display: flex;
+//                   align-items: center;
+//                   justify-content: center;
+//                   color: white;
+//                   margin-right: 10px;
+//                   cursor: pointer;
+//               }
+            
+//           }
+
+//           .register{
+//             cursor: pointer;
+//             :hover {
+//                 color: #23d5ab;
+//             }
+//           }
+//       }
+  
+//   }
+  
+  
+// .login_background{
+//     background-image: url('./login.jpg');
+//     background-size: cover; /* Đảm bảo hình ảnh sẽ phủ toàn bộ background */
+//     background-position: center; /* Đặt hình ảnh ở giữa trang */
+//     background-repeat: no-repeat; /* Ngăn hình ảnh lặp lại */
+// }
