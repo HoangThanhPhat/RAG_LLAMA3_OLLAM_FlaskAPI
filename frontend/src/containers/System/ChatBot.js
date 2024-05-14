@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { connect } from 'react-redux';
 import ChatTemplate from './ChatTemplate';
-// import Dashboard from './Dashboard/Dashboard';
+import "./ChatBot.scss"
+
+
 
 class  ChatBot  extends Component {
 
@@ -19,8 +21,8 @@ class  ChatBot  extends Component {
 
     render() {
         return (
-            <div className="text-center" >
-                <ChatTemplate />
+            <div className="chat-bot-container">
+                <ChatTemplate userId={this.props.userId} />
             </div>
         )
     }
