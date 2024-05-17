@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, request, jsonify, session
 from flask_bcrypt import check_password_hash
 from werkzeug.security import generate_password_hash
 from flask_cors import CORS
@@ -15,16 +16,18 @@ from langchain.prompts import PromptTemplate
 from pymysql import IntegrityError
 from crt_db import database,User,Qna, Conversation
 from datetime import datetime
+from dotenv import load_dotenv
 
 
 app = Flask(__name__)
 CORS(app)
+load_dotenv()
 
 # --------------------------------------------------------Connect database-----------------------------------------------------------------
 # My SQL
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:160302@localhost/rag_llama3?charset=utf8mb4"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 # database = SQLAlchemy(app)
 database.init_app(app)
 # app.app_context().push()
@@ -86,7 +89,7 @@ def aiPost():
     response_answer = {"answer": response}
     return response_answer
 
-# -----------------------------------------------------------------Talk with bot---------------------------------------------------------
+# --------------------------------------------------------------------------------------------Talk with bot-----------------------------------------------------------------------------
 @app.route("/ask_pdf", methods= ["POST"])
 def askPDFPost():
 # --------------------------------------Question------------------------------------------
@@ -239,7 +242,12 @@ def pdfPost():
     return response
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
-# ----------------------------------------------------------------GET QnA----------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------All Request--------------------------------------------------------------------------------------------------
+# ------------------------------------------GET QnA----------------------------------------------------------
 @app.route("/qna/<user_id>", methods=["GET"])
 def get_qna_by_user_id(user_id):
     try:
@@ -267,24 +275,78 @@ def get_qna_by_user_id(user_id):
     except Exception as e:
         # Xử lý các ngoại lệ và trả về thông báo lỗi
         return jsonify({"error": str(e)}), 500
+# -----------------------------------------------------------------------------------------------------------
 
 
-@app.route("/add_conversation", methods=["POST"])
+
+# ------------------------------------------Create conversation----------------------------------------------
+@app.route("/C_conversation", methods=["POST"])
 def add_conversation():
     try:
-        user_id = request.json.get("user_id")
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({"error": "User not logged in"}), 401
+
         # Tạo một bản ghi mới của Conversation
         new_conversation = Conversation(user_id=user_id)
         database.session.add(new_conversation)
         database.session.commit()
-        return jsonify({"message": "Conversation added successfully!"}), 201
+        return jsonify({"id": new_conversation.id, "message": "Conversation added successfully!"}), 201
     except Exception as e:
         database.session.rollback()
         return jsonify({"error": str(e)}), 500
+# -----------------------------------------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------------------------------------------------------------------
 
-# ----------------------------------------------------------------CRUD USER--------------------------------------------------------------
+
+# ------------------------------------------Login------------------------------------------------------------
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if request.method == "POST":
+        try:
+            data = request.json
+            username = data.get('username')
+            password = data.get('password')
+
+            if not username or not password:
+                return jsonify({"error": "Username and password are required"}), 400
+
+            # Truy vấn người dùng từ cơ sở dữ liệu
+            user = User.query.filter_by(username=username).first()
+
+            if user:
+                # So sánh mật khẩu đã hash với mật khẩu nhập vào
+                if check_password_hash(user.password, password):
+                    # Xác thực thành công, lưu user_id vào session và trả về user_id
+                    session['user_id'] = user.id
+                    return jsonify({"message": "Login successfully!"},{"user_id": user.id}), 200
+                else:
+                    # Xác thực thất bại
+                    return jsonify({"error": "Invalid username or password"}), 401
+            else:
+                # Không tìm thấy người dùng
+                return jsonify({"error": "User not found"}), 404
+        except Exception as e:
+            # Xử lý các ngoại lệ và trả về thông báo lỗi
+            return jsonify({"error": str(e)}), 500
+
+    elif request.method == "GET":
+        try:
+            user_id = session.get('user_id')
+            if user_id:
+                return jsonify({"user_id": user_id}), 200
+            else:
+                return jsonify({"error": "User not logged in"}), 401
+        except Exception as e:
+            # Xử lý các ngoại lệ và trả về thông báo lỗi
+            return jsonify({"error": str(e)}), 500
+# -----------------------------------------------------------------------------------------------------------
+
+
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------------CRUD USER------------------------------------------------------------------------------------------
 
 # -----------------Create User--------------------------
 @app.route("/create_user", methods=["POST"])
@@ -387,38 +449,6 @@ def get_all_users():
         # Xử lý các ngoại lệ và trả về thông báo lỗi
         return jsonify({"error": str(e)}), 500
 
-
-
-
-@app.route("/login", methods=["POST"])
-def login():
-    try:
-        data = request.json
-        username = data.get('username')
-        password = data.get('password')
-
-        if not username or not password:
-            return jsonify({"error": "Username and password are required"}), 400
-
-        # Truy vấn người dùng từ cơ sở dữ liệu
-        user = User.query.filter_by(username=username).first()
-
-        if user:
-            # So sánh mật khẩu đã hash với mật khẩu nhập vào
-            if check_password_hash(user.password, password):
-                # Xác thực thành công, trả về user_id
-                return jsonify({"user_id": user.id}), 200
-            else:
-                # Xác thực thất bại
-                return jsonify({"error": "Invalid username or password"}), 401
-        else:
-            # Không tìm thấy người dùng
-            return jsonify({"error": "User not found"}), 404
-    except Exception as e:
-        # Xử lý các ngoại lệ và trả về thông báo lỗi
-        return jsonify({"error": str(e)}), 500
-
-
 # -----------------Update User--------------------------
 @app.route("/user/<username>", methods=["PUT"])
 def update_user(username):
@@ -472,7 +502,6 @@ def delete_user(username):
     except Exception as e:
         # Xử lý các ngoại lệ và trả về thông báo lỗi
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
