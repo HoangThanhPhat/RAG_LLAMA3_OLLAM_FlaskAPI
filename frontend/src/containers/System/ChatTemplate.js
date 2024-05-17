@@ -1,18 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, ListGroup } from 'react-bootstrap';
 import axios from 'axios';
 import './ChatTemplate.scss';
 
-function ChatTemplate({ userId }) { // Thêm userId vào props
+function ChatTemplate() { 
     const [query, setQuery] = useState('');
     const [messages, setMessages] = useState([]);
+    const [chats, setChats] = useState([]); // Danh sách các cuộc trò chuyện
+    const [selectedChatId, setSelectedChatId] = useState(null); // ID cuộc trò chuyện được chọn
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [userId, setUserId] = useState(null);
     const messageListRef = useRef(null);
 
     useEffect(() => {
-        const fetchHistory = async () => {
+        const fetchUserId = async () => {
             try {
-                const response = await axios.get(`http://localhost:8080/qna/${userId}`);
+                const response = await axios.get('http://localhost:8080/login');
+                setUserId(response.data.user_id);
+            } catch (error) {
+                console.error('Lỗi khi lấy user_id:', error);
+            }
+        };
+
+        fetchUserId();
+    }, []);
+
+    useEffect(() => {
+        const fetchChats = async () => {
+            if (!userId) return; // Ensure userId is available
+            try {
+                const response = await axios.get(`http://localhost:8080/chats/${userId}`);
+                setChats(response.data.chats);
+            } catch (error) {
+                console.error('Lỗi khi tải danh sách cuộc trò chuyện:', error);
+            }
+        };
+
+        fetchChats();
+    }, [userId]);
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!selectedChatId) return; // Ensure selectedChatId is available
+            try {
+                const response = await axios.get(`http://localhost:8080/qna/${selectedChatId}`);
                 setMessages(response.data.messages);
             } catch (error) {
                 console.error('Lỗi khi tải lịch sử:', error);
@@ -20,13 +52,13 @@ function ChatTemplate({ userId }) { // Thêm userId vào props
         };
 
         fetchHistory();
-    }, [userId]);
+    }, [selectedChatId]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         try {
             setLoading(true);
-            const response = await axios.post('http://localhost:8080/ask_pdf', { query });
+            const response = await axios.post('http://localhost:8080/ask_pdf', { query, chatId: selectedChatId });
             const answer = response.data.answer;
 
             setMessages([...messages, { text: query, sender: 'user' }, { text: '', sender: 'bot' }]);
@@ -47,9 +79,29 @@ function ChatTemplate({ userId }) { // Thêm userId vào props
         }
     };
 
-    const handleNewChat = () => {
-        setMessages([]);
-        setQuery('');
+    const handleNewChat = async () => {
+        try {
+            const response = await axios.post('http://localhost:8080/C_conversation', {
+                user_id: userId,
+            });
+
+            if (response.status === 201) {
+                const newChat = response.data;
+                setChats([...chats, newChat]);
+                setMessages([]);
+                setQuery('');
+                setSelectedChatId(newChat.id); // Giả sử API trả về conversation ID dưới thuộc tính `id`
+            } else {
+                setError('Failed to create a new conversation');
+            }
+        } catch (error) {
+            console.error('An error occurred while creating a new conversation:', error);
+            setError('An error occurred while creating a new conversation');
+        }
+    };
+
+    const handleSelectChat = (chatId) => {
+        setSelectedChatId(chatId);
     };
 
     useEffect(() => {
@@ -66,11 +118,18 @@ function ChatTemplate({ userId }) { // Thêm userId vào props
                         New Chat
                     </Button>
                     <h4>History</h4>
-                    <ul>
-                        {messages.map((message, index) => (
-                            <li key={index}>{message.text}</li>
+                    <ListGroup>
+                        {chats.map((chat, index) => (
+                            <ListGroup.Item 
+                                key={index} 
+                                action 
+                                onClick={() => handleSelectChat(chat.id)}
+                                active={chat.id === selectedChatId}
+                            >
+                                {chat.name}
+                            </ListGroup.Item>
                         ))}
-                    </ul>
+                    </ListGroup>
                     <h4>Setting</h4>
                     <ul>
                         <li>User</li>
@@ -108,3 +167,4 @@ function ChatTemplate({ userId }) { // Thêm userId vào props
 }
 
 export default ChatTemplate;
+
