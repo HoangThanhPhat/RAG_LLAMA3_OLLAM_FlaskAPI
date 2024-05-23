@@ -1,177 +1,7 @@
-// import React, { Component } from 'react';
-// import { connect } from 'react-redux';
-// import { push } from "connected-react-router";
-// import * as actions from "../../store/actions";
-// import './Login.scss';
-// import { FormattedMessage } from 'react-intl';
-
-
-
-// class Login extends Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = {
-//             username: '',
-//             password: '',
-//             isShowPassword: false,
-//         }
-//     }
-
-//     handleOnChangeUsername = (event) => {
-//         this.setState({
-//             username: event.target.value
-//         })
-//         console.log(event.target.value)
-//     }
-
-//     handleOnChangePassword = (event) => {
-//         this.setState({
-//             password: event.target.value
-//         })
-//         console.log(event.target.value)
-//     }
-
-//     // handleLogin = () => {
-//     //     console.log('username: ', this.state.username, 'password: ', this.state.password)
-//     //     console.log('all state ', this.state)
-//     // }
-//     handleLogin = async () => {
-//     try {
-//         const response = await fetch('http://localhost:8080/login', {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify({
-//                 username: this.state.username,
-//                 password: this.state.password
-//             })
-//         });
-
-//         const data = await response.json();
-
-//         if (response.ok) {
-//             // Lưu user_id vào store Redux sau khi đăng nhập thành công
-//             this.props.userLoginSuccess(data.user_id);
-//             // Redirect hoặc thực hiện hành động tiếp theo
-//             this.props.navigate('/system/user-manage');
-
-//             // Gửi user_id đến route /ask_pdf
-//             fetch('http://localhost:8080/ask_pdf', {
-//                 method: 'POST',
-//                 headers: {
-//                     'Content-Type': 'application/json'
-//                 },
-//                 body: JSON.stringify({
-//                     user_id: data.user_id
-//                 })
-//             });
-//         } 
-        
-//         else {
-//             if (data.error === 'User not found') {
-//                 this.setState({ error: 'User does not have an account. Please sign up.' });
-//             } else {
-//                 this.setState({ error: 'Incorrect username or password.' });
-//             }
-//         }
-//     } 
-//     catch (error) {
-//         this.setState({ error: 'Login failed. Please try again.' });
-//     }
-// };
-
-    
-    
-
-//     handleShowHidePassword = () => {
-//         this.setState({
-//             isShowPassword: !this.state.isShowPassword
-//         })
-//     }
-
-//     render() {
-
-//         return (
-//            <div className='Login_Background'>
-//                 <div className='Login_Container'>
-//                     <div className='Login_content row'>
-//                         <div className='col-12 text-login'>
-//                             Login
-//                         </div>
-//                         <div className='col-12 form-group Login_input'>
-//                             <label>Username</label>
-//                             <input  type='text' 
-//                                     className='form-control' 
-//                                     placeholder='Enter your usename'
-//                                     // value={this.state.username}
-//                                     onChange={(event) => this.handleOnChangeUsername(event)}
-//                             >
-//                             </input>
-//                         </div>
-//                         <div className='col-12 form-group Login_input'>
-//                             <label>Password</label>
-//                             <div className='custom-input-password'>
-//                                 <input  type= {this.state.isShowPassword ? 'text' : 'password'}  
-//                                         className='form-control'
-//                                         placeholder='Enter your password'
-//                                         // value={this.state.password}
-//                                         onChange={(event) => this.handleOnChangePassword(event)}
-//                                 >
-//                                 </input>
-//                                 <span
-//                                     onClick={() => {this.handleShowHidePassword()}}
-//                                 >
-//                                     <i className={this.state.isShowPassword ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'}></i>
-//                                 </span>
-//                             </div>
-//                         </div>
-//                         <div className='col-12 mg-0-center'> 
-//                             <button className='btn_login'
-//                                     onClick={() => {this.handleLogin()}}
-//                             >
-//                                 Login
-//                             </button> 
-//                             {this.state.error && <div className="error">{this.state.error}</div>}
-//                         </div>
-//                         <div className='col-12 text-center mt-3'> <span className='forgot_password'>Forgot your password</span> </div>
-//                         <div className='col-12 text-center'>
-//                             <span>Orther login with:</span>
-//                         </div>
-//                         <div className='col-12 social_login'>
-//                             <i className="fa-brands fa-google google"></i>
-//                             <i className="fa-brands fa-facebook facebook"></i>
-//                         </div>
-//                         <div className='col-12 text-center mt-3 register'>
-//                                 Register
-//                         </div>
-//                     </div>
-//                 </div>
-//            </div>
-
-//         )
-//     }
-// }
-
-// const mapStateToProps = state => {
-//     return {
-//         language: state.app.language
-//     };
-// };
-
-// const mapDispatchToProps = dispatch => {
-//     return {
-//         navigate: (path) => dispatch(push(path)),
-//         // userLoginFail: () => dispatch(actions.adminLoginFail()),
-//         userLoginSuccess: (userInfo) => dispatch(actions.userLoginSuccess(userInfo))
-//     };
-// };
-
-// export default connect(mapStateToProps, mapDispatchToProps)(Login);
-
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { push } from "connected-react-router";
+import { Link } from 'react-router-dom';
 import * as actions from "../../store/actions";
 import './Login.scss';
 import Avatar from '@mui/material/Avatar';
@@ -180,7 +10,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import Link from '@mui/material/Link';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -215,18 +44,10 @@ export default function Login() {
             const data = await response.json();
 
             if (response.ok) {
+                localStorage.setItem('user_id', data.user_id);
+                localStorage.setItem('access_token', data.access_token);
                 dispatch(actions.userLoginSuccess(data.user_id));
-                dispatch(push('/system/user-manage'));
-
-                fetch('http://localhost:8080/ask_pdf', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        user_id: data.user_id
-                    })
-                });
+                dispatch(push('/system/chatbot'));
             } else {
                 if (data.error === 'User not found') {
                     setError('User does not have an account. Please sign up.');
@@ -303,6 +124,16 @@ export default function Login() {
                                 onChange={(event) => setPassword(event.target.value)}
                             />
                             <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isShowPassword}
+                                        onChange={handleShowHidePassword}
+                                        color="primary"
+                                    />
+                                }
+                                label="Show Password"
+                            />
+                            <FormControlLabel
                                 control={<Checkbox value="remember" color="primary" />}
                                 label="Remember me"
                             />
@@ -321,7 +152,7 @@ export default function Login() {
                                     </Link>
                                 </Grid>
                                 <Grid item>
-                                    <Link href="#" variant="body2">
+                                    <Link to="/signup" variant="body2">
                                         {"Don't have an account? Sign Up"}
                                     </Link>
                                 </Grid>
@@ -334,5 +165,3 @@ export default function Login() {
         </ThemeProvider>
     );
 }
-
-
