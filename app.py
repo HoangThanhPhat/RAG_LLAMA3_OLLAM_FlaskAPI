@@ -17,10 +17,12 @@ from pymysql import IntegrityError
 from crt_db import database,User,Qna, Conversation
 from datetime import datetime
 from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 load_dotenv()
 
 # --------------------------------------------------------Connect database-----------------------------------------------------------------
@@ -28,6 +30,14 @@ load_dotenv()
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:160302@localhost/rag_llama3?charset=utf8mb4"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_COOKIE_SECURE'] = True if os.environ.get("FLASK_ENV") == 'production' else False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+jwt = JWTManager(app)
 # database = SQLAlchemy(app)
 database.init_app(app)
 # app.app_context().push()
@@ -281,9 +291,10 @@ def get_qna_by_user_id(user_id):
 
 # ------------------------------------------Create conversation----------------------------------------------
 @app.route("/C_conversation", methods=["POST"])
+@jwt_required()
 def add_conversation():
     try:
-        user_id = session.get('user_id')
+        user_id = get_jwt_identity()  # Lấy user ID từ JWT
         if not user_id:
             return jsonify({"error": "User not logged in"}), 401
 
@@ -295,12 +306,12 @@ def add_conversation():
     except Exception as e:
         database.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 # -----------------------------------------------------------------------------------------------------------
 
 
-
 # ------------------------------------------Login------------------------------------------------------------
-@app.route("/login", methods=["POST", "GET"])
+@app.route("/login", methods=["POST"])
 def login():
     if request.method == "POST":
         try:
@@ -314,32 +325,55 @@ def login():
             # Truy vấn người dùng từ cơ sở dữ liệu
             user = User.query.filter_by(username=username).first()
 
-            if user:
-                # So sánh mật khẩu đã hash với mật khẩu nhập vào
-                if check_password_hash(user.password, password):
-                    # Xác thực thành công, lưu user_id vào session và trả về user_id
-                    session['user_id'] = user.id
-                    return jsonify({"message": "Login successfully!"},{"user_id": user.id}), 200
-                else:
-                    # Xác thực thất bại
-                    return jsonify({"error": "Invalid username or password"}), 401
+            if user and check_password_hash(user.password, password):
+                # Tạo JWT token
+                access_token = create_access_token(identity=user.id)
+                return jsonify({"message": "Login successfully!", "access_token": access_token, "user_id": user.id}), 200
             else:
-                # Không tìm thấy người dùng
-                return jsonify({"error": "User not found"}), 404
+                # Xác thực thất bại
+                return jsonify({"error": "Invalid username or password"}), 401
         except Exception as e:
             # Xử lý các ngoại lệ và trả về thông báo lỗi
             return jsonify({"error": str(e)}), 500
 
-    elif request.method == "GET":
-        try:
-            user_id = session.get('user_id')
-            if user_id:
-                return jsonify({"user_id": user_id}), 200
-            else:
-                return jsonify({"error": "User not logged in"}), 401
-        except Exception as e:
-            # Xử lý các ngoại lệ và trả về thông báo lỗi
-            return jsonify({"error": str(e)}), 500
+
+@app.route("/register", methods=["POST"])
+def register():
+    try:
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+
+        if not username or not password or not confirm_password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        if password != confirm_password:
+            return jsonify({"error": "Passwords do not match"}), 400
+
+        # Hash the password
+        hashed_password = generate_password_hash(password)
+
+        # Kiểm tra xem người dùng đã tồn tại hay chưa
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+
+        # Create a new user object
+        new_user = User(username=username, password=hashed_password)
+
+        # Add the new user to the database
+        database.session.add(new_user)
+        database.session.commit()
+
+        return jsonify({"message": "User registered successfully"}), 201
+    except IntegrityError:
+        database.session.rollback()
+        return jsonify({"error": "Username already exists"}), 400
+    except Exception as e:
+        database.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 # -----------------------------------------------------------------------------------------------------------
 
 
