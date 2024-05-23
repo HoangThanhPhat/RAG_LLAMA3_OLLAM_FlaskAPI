@@ -6,53 +6,24 @@ import './ChatTemplate.scss';
 function ChatTemplate() { 
     const [query, setQuery] = useState('');
     const [messages, setMessages] = useState([]);
-    const [chats, setChats] = useState([]); // Danh sách các cuộc trò chuyện
-    const [selectedChatId, setSelectedChatId] = useState(null); // ID cuộc trò chuyện được chọn
+    const [chats, setChats] = useState([]);
+    const [selectedChatId, setSelectedChatId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [userId, setUserId] = useState(null);
     const messageListRef = useRef(null);
 
     useEffect(() => {
-        const fetchUserId = async () => {
-            try {
-                const response = await axios.get('http://localhost:8080/login');
-                setUserId(response.data.user_id);
-            } catch (error) {
-                console.error('Lỗi khi lấy user_id:', error);
-            }
-        };
-
-        fetchUserId();
+        // Get user_id and access_token from localStorage
+        const user_id = localStorage.getItem('user_id');
+        const token = localStorage.getItem('token');
+        if (!user_id || !token) {
+            console.error('User not logged in or token not available');
+            setError('User not logged in or token not available');
+        } else {
+            setUserId(user_id);
+        }
     }, []);
-
-    useEffect(() => {
-        const fetchChats = async () => {
-            if (!userId) return; // Ensure userId is available
-            try {
-                const response = await axios.get(`http://localhost:8080/chats/${userId}`);
-                setChats(response.data.chats);
-            } catch (error) {
-                console.error('Lỗi khi tải danh sách cuộc trò chuyện:', error);
-            }
-        };
-
-        fetchChats();
-    }, [userId]);
-
-    useEffect(() => {
-        const fetchHistory = async () => {
-            if (!selectedChatId) return; // Ensure selectedChatId is available
-            try {
-                const response = await axios.get(`http://localhost:8080/qna/${selectedChatId}`);
-                setMessages(response.data.messages);
-            } catch (error) {
-                console.error('Lỗi khi tải lịch sử:', error);
-            }
-        };
-
-        fetchHistory();
-    }, [selectedChatId]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -81,24 +52,47 @@ function ChatTemplate() {
 
     const handleNewChat = async () => {
         try {
-            const response = await axios.post('http://localhost:8080/C_conversation', {
-                user_id: userId,
+            console.log('handleNewChat called');
+            const user_id = localStorage.getItem('user_id');
+            const token = localStorage.getItem('token'); // Lấy token từ localStorage
+            if (!user_id) {
+                setError('User ID not available');
+                console.error('User ID not available');
+                return;
+            }
+    
+            // Log dữ liệu gửi đi để kiểm tra
+            const requestData = {
+                user_id: user_id,
+            };
+            console.log('Request Data:', requestData);
+            console.log('Token:', token);
+    
+            const response = await axios.post('http://localhost:8080/C_conversation', requestData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json'
+                },
+                withCredentials: true
             });
-
+    
             if (response.status === 201) {
+                console.log('New chat created successfully', response.data);
                 const newChat = response.data;
                 setChats([...chats, newChat]);
                 setMessages([]);
                 setQuery('');
-                setSelectedChatId(newChat.id); // Giả sử API trả về conversation ID dưới thuộc tính `id`
+                setSelectedChatId(newChat.id);
             } else {
                 setError('Failed to create a new conversation');
+                console.error('Failed to create a new conversation', response);
             }
         } catch (error) {
             console.error('An error occurred while creating a new conversation:', error);
             setError('An error occurred while creating a new conversation');
         }
     };
+    
 
     const handleSelectChat = (chatId) => {
         setSelectedChatId(chatId);
@@ -151,9 +145,16 @@ function ChatTemplate() {
                     <Form className="message-form" onSubmit={handleSubmit}>
                         <Form.Control
                             type="text"
-                            placeholder="Nhập tin nhắn của bạn..."
+                            placeholder="Nhập câu hỏi của bạn..."
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
+                            as="textarea"
+                            rows="1"
+                            style={{ resize: 'none', overflow: 'hidden' }}
+                            onInput={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
                         />
                         <Button variant="primary" type="submit">Gửi</Button>
                     </Form>
@@ -167,4 +168,3 @@ function ChatTemplate() {
 }
 
 export default ChatTemplate;
-
